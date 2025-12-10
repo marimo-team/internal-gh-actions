@@ -1,0 +1,32 @@
+# Example workflow using the release-notification action
+# This file shows different ways to use the action
+
+name: Release Example
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Simulate your release steps
+      - name: Build and Release
+        run: |
+          echo "Building and releasing..."
+          # Your actual release commands here
+
+      # Single notification step that handles both success and failure
+      - name: Notify Release Result
+        if: always()
+        uses: marimo-team/internal-gh-actions/release-notification@main
+        with:
+          status: ${{ job.status }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL_RELEASES }}
+          artifact-url: 'https://marketplace.example.com/my-awesome-project'
+
