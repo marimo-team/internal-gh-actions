@@ -1,0 +1,62 @@
+name: 'Release Notification'
+description: 'Send Slack notifications for release success or failure'
+author: marimo-team
+
+inputs:
+  status:
+    description: 'Status of the release (success or failure)'
+    required: true
+  slack-webhook-url:
+    description: 'Slack webhook URL for notifications'
+    required: true
+  artifact-url:
+    description: 'URL to the marketplace or release page (optional, only shown on success)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Notify Slack - Release Success
+      if: inputs.status == 'success' && (github.event.pull_request.head.repo.fork == false || github.event.pull_request == null)
+      uses: slackapi/slack-github-action@v2.1.1
+      with:
+        webhook: ${{ inputs.slack-webhook-url }}
+        webhook-type: incoming-webhook
+        payload: |
+          {
+            "text": "✅ Release completed successfully for ${{ github.event.repository.name }}",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Release successful*\n\n*Repository:* ${{ github.event.repository.name }}\n*Commit:* <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n*Branch:* ${{ github.ref_name }}${{ inputs.artifact-url != '' && format('\n*URL:* {0}', inputs.artifact-url) || '' }}"
+                }
+              }
+            ]
+          }
+
+    - name: Notify Slack - Release Failed
+      if: inputs.status == 'failure' && (github.event.pull_request.head.repo.fork == false || github.event.pull_request == null)
+      uses: slackapi/slack-github-action@v2.1.1
+      with:
+        webhook: ${{ inputs.slack-webhook-url }}
+        webhook-type: incoming-webhook
+        payload: |
+          {
+            "text": "❌ Release failed for ${{ github.event.repository.name }}",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ *Release failed*\n\n*Repository:* ${{ github.event.repository.name }}\n*Commit:* <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n*Branch:* ${{ github.ref_name }}\n*Triggered by:* ${{ github.actor }}\n*Workflow:* <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>"
+                }
+              }
+            ]
+          }
+
+branding:
+  icon: 'message-square'
+  color: 'blue'
