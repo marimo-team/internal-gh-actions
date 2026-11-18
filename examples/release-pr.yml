@@ -1,0 +1,42 @@
+name: Prepare release PR
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Stable version or bump name
+        type: string
+        required: true
+permissions: {}
+concurrency:
+  group: prepare-release-pr
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    environment: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Prepare repository versions
+        id: version
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          # Supply this repository-owned adapter and install its runtime first.
+          node scripts/prepare-release.mjs "$REQUESTED_VERSION"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: marimo-team/internal-gh-actions/release-pr@REPLACE_WITH_REVIEWED_SHA
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          version: ${{ steps.version.outputs.version }}
+          # Replace with the exact files changed by the adapter.
+          files: |
+            package.json
+            package-lock.json

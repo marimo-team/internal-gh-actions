@@ -38,6 +38,9 @@ test("stable versions reject leading zeros, prereleases and injection", () => {
       "1.2.3\nx=1",
       "1.2.3\n",
       "1.2.3\r\n",
+      "1.2.3\r",
+      "1.2.3\u2028",
+      "1.2.3\u2029",
       null,
     ]
   ) {
@@ -130,9 +133,11 @@ function prApi(
     advanced = false,
     tagged = false,
     closed = false,
+    race = false,
   } = {},
 ) {
   const calls = [];
+  let raced = false;
   const api = async (method, path, body) => {
     calls.push([method, path, body]);
     if (path.startsWith("git/ref/tags/")) {
@@ -142,12 +147,18 @@ function prApi(
       return { object: { sha: advanced ? "new" : sha } };
     }
     if (path.startsWith("git/ref/heads/release")) {
-      return exists ? { object: { sha: "release" } } : missing();
+      return (exists || raced) ? { object: { sha: "release" } } : missing();
     }
     if (path === `git/commits/${sha}`) return { tree: { sha: "base-tree" } };
     if (path === "git/trees") return { sha: "prepared-tree" };
     if (path === "git/commits") return { sha: "release" };
-    if (path === "git/refs") return { object: { sha: "release" } };
+    if (path === "git/refs") {
+      if (race) {
+        raced = true;
+        throw Object.assign(new Error("exists"), { status: 422 });
+      }
+      return { object: { sha: "release" } };
+    }
     if (path === "git/commits/release") {
       return {
         tree: { sha: conflict ? "edited" : "prepared-tree" },
@@ -269,4 +280,36 @@ test("aggregate notification fails for any missing required publication", () => 
   );
   assert.deepEqual(JSON.parse(JSON.stringify(payload)), payload);
   assert.equal(payload.blocks[0].text.type, "plain_text");
+});
+
+test("concurrent PR ref creation reuses identical changes and rejects conflicts", async () => {
+  const identical = prApi({ race: true });
+  assert.equal(
+    (await ensureReleasePr(
+      identical.api,
+      "team/repo",
+      "main",
+      sha,
+      "1.2.3",
+      [],
+    )).html_url,
+    "created",
+  );
+  const conflicting = prApi({ race: true, conflict: true });
+  await assert.rejects(
+    ensureReleasePr(conflicting.api, "team/repo", "main", sha, "1.2.3", []),
+    /different changes/,
+  );
+});
+test("concurrent tag creation rejects a different target", async () => {
+  let reads = 0;
+  const api = async (method, path) => {
+    if (method === "GET") {
+      if (!reads++) return missing();
+      return { object: { type: "commit", sha: "other" } };
+    }
+    if (path === "git/tags") return { sha: "tag" };
+    throw Object.assign(new Error("exists"), { status: 422 });
+  };
+  await assert.rejects(ensureTag(api, "1.2.3", sha), /another commit/);
 });

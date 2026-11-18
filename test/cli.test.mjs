@@ -70,6 +70,12 @@ test("CLI checks event, checkout, tag ancestry and prepared plan before credenti
     git("commit", "--allow-empty", "-m", "later");
     assert.notEqual(run("tag-check").status, 0);
     assert.notEqual(run("validate").status, 0);
+    const later = git("rev-parse", "HEAD");
+    git("update-ref", "refs/remotes/origin/main", later);
+    git("checkout", "--detach", sha);
+    assert.equal(run("validate").status, 0);
+    git("checkout", "main");
+    git("update-ref", "refs/remotes/origin/main", sha);
     git("tag", "-f", "v1.2.3");
     const offMain = run("validate");
     assert.notEqual(offMain.status, 0);

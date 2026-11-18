@@ -1,0 +1,31 @@
+name: Tag merged release
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+permissions: {}
+jobs:
+  tag:
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'release/') &&
+      startsWith(github.event.pull_request.title, 'release: ')
+    environment: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: release-tag-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
+      # Add repository-specific cross-manifest validation before this action.
+      - uses: marimo-team/internal-gh-actions/release-tag@REPLACE_WITH_REVIEWED_SHA
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
