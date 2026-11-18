@@ -1,0 +1,26 @@
+name: Wait for workflows
+description: Require successful push workflows for an exact commit in this repository
+inputs:
+  workflows:
+    description: Newline-separated workflow filenames
+    required: true
+  commit:
+    description: Full commit SHA to check
+    required: true
+  branch:
+    description: Branch whose push runs to check
+    default: main
+  token:
+    description: Token with actions read permission
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        GH_REPO: ${{ github.repository }}
+        WAIT_WORKFLOWS: ${{ inputs.workflows }}
+        WAIT_COMMIT: ${{ inputs.commit }}
+        WAIT_BRANCH: ${{ inputs.branch }}
+      run: bash "$GITHUB_ACTION_PATH/../lib/wait-for-workflows.sh"
