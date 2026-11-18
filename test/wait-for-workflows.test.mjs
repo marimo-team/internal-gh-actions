@@ -103,3 +103,16 @@ for (
     assert.deepEqual(result.calls, []);
   });
 }
+
+test("selects only the requested PR event", (t) => {
+  const result = run(t, "success", { WAIT_EVENT: "pull_request" });
+  assert.equal(result.status, 0, result.stderr);
+  for (const args of result.calls.filter((a) => a[1] === "list")) {
+    assert.equal(args[args.indexOf("--event") + 1], "pull_request");
+  }
+});
+test("rejects other events", (t) => {
+  const result = run(t, "success", { WAIT_EVENT: "workflow_dispatch" });
+  assert.notEqual(result.status, 0);
+  assert.deepEqual(result.calls, []);
+});

@@ -84,6 +84,7 @@ test("CLI checks event, checkout, tag ancestry and prepared plan before credenti
     const preparation = {
       GITHUB_EVENT_NAME: "workflow_dispatch",
       GITHUB_REF: "refs/heads/main",
+      RELEASE_CURRENT_VERSION: "1.2.3",
       RELEASE_VERSION: "1.2.4",
       RELEASE_FILES: "package.json",
     };

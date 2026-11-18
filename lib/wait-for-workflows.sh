@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+WAIT_EVENT="${WAIT_EVENT:-push}"
+[[ "$WAIT_EVENT" == push || "$WAIT_EVENT" == pull_request ]] || exit 1
 
 if [[ ! "$WAIT_COMMIT" =~ ^[0-9a-f]{40}$ || -z "$WAIT_BRANCH" ]]; then
   echo "::error::Provide a full commit SHA and a branch"
@@ -16,12 +18,12 @@ while IFS= read -r workflow; do
   count=$((count + 1))
   run_id=""
   for _attempt in {1..30}; do
-    run_id="$(gh run list --workflow "$workflow" --branch "$WAIT_BRANCH" --commit "$WAIT_COMMIT" --event push --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+    run_id="$(gh run list --workflow "$workflow" --branch "$WAIT_BRANCH" --commit "$WAIT_COMMIT" --event "$WAIT_EVENT" --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
     if [[ -n "$run_id" ]]; then break; fi
     sleep 10
   done
   if [[ -z "$run_id" ]]; then
-    echo "::error::No $workflow push run found for $WAIT_COMMIT"
+    echo "::error::No $workflow $WAIT_EVENT run found for $WAIT_COMMIT"
     exit 1
   fi
   gh run watch "$run_id" --exit-status --interval 20

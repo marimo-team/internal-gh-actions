@@ -16,6 +16,9 @@ inputs:
   version:
     description: Prepared stable release version
     required: true
+  current-version:
+    description: Version before preparation
+    required: true
   files:
     description: Newline-separated allowlist of exact file paths
     required: true
@@ -34,6 +37,7 @@ runs:
       env:
         RELEASE_BASE: ${{ inputs.base }}
         RELEASE_MANIFEST: ${{ inputs.manifest }}
+        RELEASE_CURRENT_VERSION: ${{ inputs.current-version }}
         RELEASE_VERSION: ${{ inputs.version }}
         RELEASE_FILES: ${{ inputs.files }}
       run: node "$GITHUB_ACTION_PATH/../lib/cli.mjs" pr-prepare
