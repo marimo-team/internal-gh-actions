@@ -1,0 +1,25 @@
+name: Validate release tag
+description: Require a stable tag matching the manifest on the release base branch
+inputs:
+  base:
+    description: Release base branch
+    default: main
+  manifest:
+    description: JSON manifest with a top-level version field
+    default: package.json
+outputs:
+  version:
+    description: Validated stable version
+    value: ${{ steps.validate.outputs.version }}
+  tag:
+    description: Validated release tag
+    value: ${{ steps.validate.outputs.tag }}
+runs:
+  using: composite
+  steps:
+    - id: validate
+      shell: bash
+      env:
+        RELEASE_BASE: ${{ inputs.base }}
+        RELEASE_MANIFEST: ${{ inputs.manifest }}
+      run: node "$GITHUB_ACTION_PATH/../lib/cli.mjs" validate
