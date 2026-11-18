@@ -1,0 +1,53 @@
+name: Open release PR
+description: Commit an allowlisted prepared diff to a versioned branch and open a release PR
+inputs:
+  app-id:
+    description: Release GitHub App ID
+    required: true
+  private-key:
+    description: Release GitHub App private key
+    required: true
+  base:
+    description: Release base branch
+    default: main
+  manifest:
+    description: JSON manifest with a top-level version field
+    default: package.json
+  version:
+    description: Prepared stable release version
+    required: true
+  files:
+    description: Newline-separated allowlist of exact file paths
+    required: true
+outputs:
+  url:
+    description: Release PR URL
+    value: ${{ steps.pr.outputs.url }}
+  number:
+    description: Release PR number
+    value: ${{ steps.pr.outputs.number }}
+runs:
+  using: composite
+  steps:
+    - id: prepare
+      shell: bash
+      env:
+        RELEASE_BASE: ${{ inputs.base }}
+        RELEASE_MANIFEST: ${{ inputs.manifest }}
+        RELEASE_VERSION: ${{ inputs.version }}
+        RELEASE_FILES: ${{ inputs.files }}
+      run: node "$GITHUB_ACTION_PATH/../lib/cli.mjs" pr-prepare
+    - id: token
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        permission-contents: write
+        permission-pull-requests: write
+    - id: pr
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.token.outputs.token }}
+        RELEASE_BASE: ${{ inputs.base }}
+        RELEASE_PLAN: ${{ steps.prepare.outputs.plan }}
+      run: node "$GITHUB_ACTION_PATH/../lib/cli.mjs" pr

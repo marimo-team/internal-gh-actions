@@ -1,32 +1,37 @@
-# Example workflow using the release-notification action
-# This file shows different ways to use the action
-
-name: Release Example
-
+name: Release example
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
+    tags: ['v*.*.*']
+permissions: {}
 jobs:
-  release:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: version
+        uses: marimo-team/internal-gh-actions/validate-release@REPLACE_WITH_REVIEWED_SHA
+  publish:
+    needs: validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      # Simulate your release steps
-      - name: Build and Release
-        run: |
-          echo "Building and releasing..."
-          # Your actual release commands here
-
-      # Single notification step that handles both success and failure
-      - name: Notify Release Result
-        if: always()
-        uses: marimo-team/internal-gh-actions/release-notification@main
+      - name: Repository-owned publishing
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: echo "Replace this step with publication of version $VERSION"
+  notify:
+    if: always()
+    needs: [validate, publish]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: marimo-team/internal-gh-actions/release-notification@REPLACE_WITH_REVIEWED_SHA
         with:
-          status: ${{ job.status }}
+          results: ${{ toJSON(needs) }}
           slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL_RELEASES }}
-          artifact-url: 'https://marketplace.example.com/my-awesome-project'
-
+          artifact-url: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
