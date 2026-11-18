@@ -13,6 +13,7 @@ branches or tags.
 | `release-pr`           | `app-id`, `private-key`, `version`, `files`       | `base`, `manifest` | `url`, `number`  |
 | `release-tag`          | `app-id`, `private-key`                           | `base`, `manifest` | `tag`, `created` |
 | `validate-release`     | —                                                 | `base`, `manifest` | `version`, `tag` |
+| `wait-for-workflows`   | `workflows`, `commit`                              | `branch`, `token` | —                |
 | `release-notification` | `slack-webhook-url`, either `results` or `status` | `artifact-url`     | —                |
 
 `base` defaults to `main`. `manifest` defaults to `package.json` and must be
@@ -76,6 +77,13 @@ release-PR provenance.
 Rerun failed publisher jobs after a partial release. An existing tag does not
 trigger publication again. Registry credentials stay with repository-owned
 publisher jobs.
+
+## Wait for workflows
+
+`wait-for-workflows` requires `gh` and `actions: read`. It requires successful
+push runs for the exact `commit` and `branch` (default: `main`). Pass workflow
+filenames on separate lines. Discovery times out after five minutes per workflow.
+Set a job timeout to bound the full wait.
 
 ## Notifications and tests
 
