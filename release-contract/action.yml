@@ -1,0 +1,32 @@
+name: Release contract
+description: Check release preparation in disposable checkouts and require package CI
+inputs:
+  workflows:
+    description: Newline-separated package CI workflow filenames
+    default: ''
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: 24
+    - id: tools
+      shell: bash
+      run: node -e 'console.log("pnpm=" + (require("./.release.json").command[0] === "pnpm"))' >> "$GITHUB_OUTPUT"
+    - if: steps.tools.outputs.pnpm == 'true'
+      uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+    - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      with:
+        version: '0.12.23'
+    - shell: bash
+      run: node "$GITHUB_ACTION_PATH/../lib/contract.mjs"
+    - if: inputs.workflows != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        WAIT_WORKFLOWS: ${{ inputs.workflows }}
+        WAIT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        WAIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+        WAIT_EVENT: ${{ github.event_name }}
+      run: bash "$GITHUB_ACTION_PATH/../lib/wait-for-workflows.sh"

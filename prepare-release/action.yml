@@ -1,0 +1,27 @@
+name: Prepare release
+description: Validate an increasing stable version and run the repository's release adapter
+inputs:
+  version:
+    description: Stable version or patch, minor, major
+    required: true
+outputs:
+  version:
+    description: Prepared version
+    value: ${{ steps.prepare.outputs.version }}
+  current-version:
+    description: Original version
+    value: ${{ steps.prepare.outputs.current-version }}
+  manifest:
+    description: Prepared JSON manifest
+    value: ${{ steps.prepare.outputs.manifest }}
+  files:
+    description: Exact release file allowlist
+    value: ${{ steps.prepare.outputs.files }}
+runs:
+  using: composite
+  steps:
+    - id: prepare
+      shell: bash
+      env:
+        REQUESTED_VERSION: ${{ inputs.version }}
+      run: node "$GITHUB_ACTION_PATH/../lib/prepare.mjs" prepare

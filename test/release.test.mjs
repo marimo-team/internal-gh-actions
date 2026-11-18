@@ -223,8 +223,14 @@ test("prepared diff rejects files outside exact allowlist", () => {
     git("config", "user.name", "test");
     git("config", "user.email", "test@example.com");
     writeFileSync("package.json", '{"version":"1.0.0"}');
+    writeFileSync("script.py", "version = '1.0.0'", { mode: 0o755 });
     git("add", ".");
     git("commit", "-m", "initial");
+    writeFileSync("script.py", "version = '1.0.1'");
+    assert.equal(preparedFiles("script.py")[0].mode, "100755");
+    chmodSync("script.py", 0o644);
+    assert.throws(() => preparedFiles("script.py"), /mode must not change/);
+    git("checkout", "--", "script.py");
     writeFileSync("package.json", '{"version":"1.0.1"}');
     assert.equal(
       preparedFiles("package.json")[0].content,
@@ -241,7 +247,7 @@ test("prepared diff rejects files outside exact allowlist", () => {
     );
     rmSync(".github", { recursive: true });
     chmodSync("package.json", 0o755);
-    assert.throws(() => preparedFiles("package.json"), /non-executable/);
+    assert.throws(() => preparedFiles("package.json"), /mode must not change/);
     chmodSync("package.json", 0o644);
     writeFileSync("package.json", Buffer.from([0xff]));
     assert.throws(() => preparedFiles("package.json"), /encoded data/);
