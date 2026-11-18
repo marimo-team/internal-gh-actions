@@ -1,3 +1,4 @@
+import { chmodSync, symlinkSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -29,7 +30,17 @@ const missing = () => {
 };
 test("stable versions reject leading zeros, prereleases and injection", () => {
   assert.equal(version("1.2.3"), "1.2.3");
-  for (const v of ["01.2.3", "1.2.3-rc.1", "1.2", "1.2.3\nx=1", null]) {
+  for (
+    const v of [
+      "01.2.3",
+      "1.2.3-rc.1",
+      "1.2",
+      "1.2.3\nx=1",
+      "1.2.3\n",
+      "1.2.3\r\n",
+      null,
+    ]
+  ) {
     assert.throws(() => version(v));
   }
 });
@@ -217,6 +228,17 @@ test("prepared diff rejects files outside exact allowlist", () => {
       () => preparedFiles("package.json\n.github/test.yml"),
       /Unexpected/,
     );
+    rmSync(".github", { recursive: true });
+    chmodSync("package.json", 0o755);
+    assert.throws(() => preparedFiles("package.json"), /non-executable/);
+    chmodSync("package.json", 0o644);
+    writeFileSync("package.json", Buffer.from([0xff]));
+    assert.throws(() => preparedFiles("package.json"), /encoded data/);
+    rmSync("package.json");
+    symlinkSync("missing-target", "package.json");
+    assert.throws(() => preparedFiles("package.json"), /regular/);
+    rmSync("package.json");
+    assert.throws(() => preparedFiles("package.json"), /ENOENT/);
   } finally {
     process.chdir(previous);
     rmSync(dir, { recursive: true, force: true });

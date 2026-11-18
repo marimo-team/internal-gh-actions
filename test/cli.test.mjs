@@ -70,6 +70,10 @@ test("CLI checks event, checkout, tag ancestry and prepared plan before credenti
     git("commit", "--allow-empty", "-m", "later");
     assert.notEqual(run("tag-check").status, 0);
     assert.notEqual(run("validate").status, 0);
+    git("tag", "-f", "v1.2.3");
+    const offMain = run("validate");
+    assert.notEqual(offMain.status, 0);
+    assert.match(offMain.stderr, /merge-base --is-ancestor/);
     writeFileSync(join(dir, "package.json"), '{"version":"1.2.4"}');
     const preparation = {
       GITHUB_EVENT_NAME: "workflow_dispatch",
