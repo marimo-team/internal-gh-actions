@@ -191,3 +191,17 @@ test("pagination reads beyond the first page", async () => {
   );
   assert.equal(all.length, 101);
 });
+
+test("status finds an existing PR reused by a successful preparation retry", async () => {
+  const api = async (path) => {
+    if (path.includes("release-pr.yml/runs")) {
+      return {
+        workflow_runs: [{ ...prep, created_at: "2026-01-05T00:00:00Z", conclusion: "success" }],
+      };
+    }
+    if (path.endsWith("/pending_deployments")) return [];
+    if (path.startsWith("pulls?")) return [{ ...pr, state: "open" }];
+    throw new Error(path);
+  };
+  assert.deepEqual(await status(api, repo), { state: "PR open", url: pr.html_url });
+});
