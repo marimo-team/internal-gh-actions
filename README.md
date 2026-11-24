@@ -25,7 +25,7 @@ stable `version`, without `v`, leading zeros, or surrounding whitespace.
 - Install a dedicated release App on its active consumers. Grant Contents write; PR creation also
   needs Pull requests write. No Administration permission is needed.
 - Store `RELEASE_APP_ID` as a variable and `RELEASE_APP_PRIVATE_KEY` in a protected `release`
-  environment. Restrict that environment to `main`, require a release-team reviewer, prevent
+  environment. Restrict that environment to `main` and `refs/pull/*/merge`. Require a release-team reviewer, prevent
   self-review, and disable admin bypass. Remove repository/org copies of the key. Token scoping
   alone does not restrict the private key's authority.
 - Require independent PR review and passing CI on the base branch, without bypass.
@@ -108,3 +108,34 @@ dynamic values.
 
 Run `node --test test/*.test.mjs` and `actionlint`. Tests use local Git fixtures and mock APIs; they
 do not create remote releases or send notifications.
+
+## Release command
+
+Install Node 22+ and authenticate `gh`. Clone this repository to a stable local path:
+
+```sh
+gh repo clone marimo-team/internal-gh-actions "$HOME/.local/share/internal-gh-actions"
+# Check out the reviewed commit used by your release workflows.
+gh alias set release-control '!node "$HOME/.local/share/internal-gh-actions/bin/release.mjs" "$@"'
+gh release-control request patch
+gh release-control status
+gh release-control approve
+```
+
+The request command prints the exact dispatch URL. It does not search for another user's latest run.
+Status reports approval, PR, tagging, and publishing progress. Failures retain their run link.
+Approval checks workflow identity and merged PR provenance before it submits a pending deployment.
+GitHub enforces reviewer membership and prevents self-review. Multiple waiting runs require an explicit run ID.
+Set `GITHUB_REPOSITORY=owner/repo` to select another repository.
+
+## Approval notifications
+
+Add the independent `notify-approval` job from both workflow examples. Keep its job name
+`Notify release approval`. It uses `actions: read`, `pull-requests: read`, and `contents: read`.
+It does not check out repository code or request the protected environment.
+Supply the repository or organization secret `SLACK_WEBHOOK_URL_RELEASES`.
+
+The observer polls pending deployments for up to ten minutes. It sends one message only after
+GitHub exposes the `release` approval request. Rejected or completed jobs produce no message.
+Reruns do not repeat the original notification. If notification delivery fails, use the run URL
+from the request command or status command. Slack delivery is not retried automatically.
