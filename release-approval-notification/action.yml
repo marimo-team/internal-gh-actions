@@ -1,0 +1,17 @@
+name: Release approval notification
+description: Notify only after GitHub exposes a pending release deployment
+inputs:
+  slack-webhook-url:
+    description: Releases channel incoming webhook
+    required: true
+  token:
+    description: Token with Actions and Pull requests read permissions
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        SLACK_WEBHOOK_URL: ${{ inputs.slack-webhook-url }}
+      run: node "$GITHUB_ACTION_PATH/../bin/release.mjs" notify-waiting
