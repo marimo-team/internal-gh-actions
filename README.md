@@ -139,3 +139,7 @@ The observer polls pending deployments for up to ten minutes. It sends one messa
 GitHub exposes the `release` approval request. Rejected or completed jobs produce no message.
 Reruns do not repeat the original notification. If notification delivery fails, use the run URL
 from the request command or status command. Slack delivery is not retried automatically.
+
+Approval observers must use a runner allowed by the organization IP policy. The examples use
+`vars.CI_RUNNER_SMALL`, matching the managed release repositories. A public `ubuntu-latest` runner
+can receive HTTP 403 even with the correct token permissions.
