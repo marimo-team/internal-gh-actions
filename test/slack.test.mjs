@@ -54,6 +54,7 @@ test("hostile metadata cannot create mentions or extra links", () => {
     actor: { login: value },
   });
   assert.ok(!renderedLinks(p).includes(value));
+  assert.ok(!p.text.includes("<!channel>"));
   assert.equal(p.mrkdwn, false);
   assert.equal(p.link_names, false);
   assert.deepEqual(JSON.parse(JSON.stringify(p)), p);
