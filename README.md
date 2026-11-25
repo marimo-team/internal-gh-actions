@@ -143,3 +143,13 @@ from the request command or status command. Slack delivery is not retried automa
 Approval observers must use a runner allowed by the organization IP policy. The examples use
 `vars.CI_RUNNER_SMALL`, matching the managed release repositories. A public `ubuntu-latest` runner
 can receive HTTP 403 even with the correct token permissions.
+
+## Slack message layout
+
+Approval messages show a yellow status header, the repository, version, release step, and requester.
+Use **Review & approve** to open the GitHub approval page, or **View release PR** to inspect the PR.
+Publication messages use a green success header or red failure header, with links to the workflow and artifact.
+These are ordinary links in Block Kit sections. No Slack interactivity endpoint is required.
+
+Dynamic metadata stays in plain-text blocks. Links are generated only for HTTP or HTTPS URLs.
+Messages include accessible fallback text and disable link previews to keep the channel compact.
