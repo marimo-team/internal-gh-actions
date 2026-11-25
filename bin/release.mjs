@@ -1,23 +1,18 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import {
-  approve,
-  github,
-  identity,
-  notifyWaiting,
-  request,
-  status,
-  waiting,
-} from "../lib/control.mjs";
-const [command, value] = process.argv.slice(2);
+import { approve, github, identity, notifyWaiting, status, waiting } from "../lib/control.mjs";
+import { localRequest } from "../lib/local-request.mjs";
+const [command, value, ...flags] = process.argv.slice(2);
 try {
   const repository = process.env.GITHUB_REPOSITORY ||
     execFileSync("gh", ["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"], {
       encoding: "utf8",
     }).trim();
   const api = github(repository);
-  if (command === "request") console.log(await request(api, value));
-  else if (command === "status") {
+  if (command === "request") {
+    if (flags.some((flag) => flag !== "--dry-run")) throw new Error("Unknown request option");
+    console.log(await localRequest(repository, value, { dryRun: flags.includes("--dry-run") }));
+  } else if (command === "status") {
     console.log(JSON.stringify(await status(api, repository), null, 2));
   } else if (command === "approve") {
     if (value) {

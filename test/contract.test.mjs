@@ -24,7 +24,7 @@ function fixture(t, fault) {
   write("RELEASING.md", fault === "docs" ? "outdated" : "npm run release patch");
   write(
     "scripts/release.cjs",
-    `require('node:child_process').execFileSync('gh', ['workflow','run','release-pr.yml','--repo','team/repo','--ref','main','-f','version='+process.argv[2]]);`,
+    `require('node:child_process').execFileSync('gh', ['release-control','request',process.argv[2]], {env:{...process.env,GITHUB_REPOSITORY:'team/repo'}});`,
   );
   write(
     "scripts/metadata.cjs",
