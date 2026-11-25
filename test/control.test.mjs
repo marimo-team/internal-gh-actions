@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { approve, identity, list, notifyWaiting, request, status } from "../lib/control.mjs";
+import { approve, identity, list, notifyWaiting, status } from "../lib/control.mjs";
 const repo = "team/repo";
 const prep = {
   id: 1,
@@ -56,18 +56,6 @@ function fixture(run = tag, pull = pr, pending = [deployment]) {
   };
   return { api, writes };
 }
-test("request returns the exact dispatch URL without racing other requests", async () => {
-  let count = 0;
-  const api = async (path, body) => {
-    count++;
-    assert.equal(path, "actions/workflows/release-pr.yml/dispatches");
-    assert.deepEqual(body, { ref: "main", inputs: { version: "patch" }, return_run_details: true });
-    return { html_url: "https://example/exact" };
-  };
-  assert.match(await request(api, "patch"), /approve: https:\/\/example\/exact/);
-  await assert.rejects(request(api, "1.2.3-rc.1"));
-  assert.equal(count, 1);
-});
 test("approval validates PR head SHA, merged time and exact identity before writing", async () => {
   const { api, writes } = fixture();
   await approve(api, repo, 3);
@@ -97,7 +85,7 @@ test("approval validates PR head SHA, merged time and exact identity before writ
   }
 });
 test("preparation only allows dispatch from main; respects GitHub approval permissions", async () => {
-  await identity(fixture(prep).api, prep, repo);
+  await assert.rejects(identity(fixture(prep).api, prep, repo));
   await assert.rejects(identity(fixture().api, { ...prep, head_branch: "feature" }, repo));
   for (const pending of [[], [{ ...deployment, current_user_can_approve: false }]]) {
     const f = fixture(prep, pr, pending);
@@ -106,7 +94,7 @@ test("preparation only allows dispatch from main; respects GitHub approval permi
   }
 });
 test("notifications send once only for pending environments, never rejected jobs or reruns", async () => {
-  for (const run of [prep, tag]) {
+  for (const run of [tag]) {
     const messages = [];
     assert.equal(
       await notifyWaiting(fixture(run).api, repo, run.id, (p) => messages.push(p)),
@@ -123,7 +111,7 @@ test("notifications send once only for pending environments, never rejected jobs
   }
 });
 test("notification polls until pending instead of guessing from run status", async () => {
-  const f = fixture(prep);
+  const f = fixture(tag);
   let reads = 0;
   let sent = 0;
   const api = async (path) =>
@@ -139,7 +127,6 @@ test("notification polls until pending instead of guessing from run status", asy
 test("status walks all five release states and preserves failures", async () => {
   for (
     const phase of [
-      "preparation awaiting approval",
       "PR open",
       "tagging awaiting approval",
       "publishing",
